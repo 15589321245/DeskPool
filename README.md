@@ -112,7 +112,18 @@ py -3 -m pip install pyinstaller
 py -3 -m PyInstaller --noconfirm --onefile --windowed --name DeskPool --icon assets/deskpool.ico --add-data "assets/deskpool.png:assets" windows\deskpool.py
 ```
 
-Windows EXE 位于 `dist\DeskPool.exe`。仓库的 [Build DeskPool 工作流](.github/workflows/build.yml) 可在 GitHub Actions 里构建 Mac 和 Windows 工件。工作流工件可以下载测试，是否发布到 Releases 由仓库维护者决定。
+Windows EXE 位于 `dist\DeskPool.exe`。[Build DeskPool 工作流](.github/workflows/build.yml) 会生成 Mac 和 Windows 构建产物，可在 Actions 的 Artifacts 下载。
+
+### 自动发布
+
+将待发布的代码提交推送到仓库后，推送一个与 `build-app.sh` 中应用版本一致的标签，例如：
+
+```bash
+git tag v1.5.1
+git push origin v1.5.1
+```
+
+标签触发的构建在 Apple 芯片、Intel Mac 和 Windows x64 三项任务全部成功后，会把三个 ZIP 自动发布到 [Releases](https://github.com/15589321245/DeskPool/releases)。分支推送、拉取请求和手动运行只构建。
 
 ## 源码与许可证
 

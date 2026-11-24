@@ -112,7 +112,18 @@ py -3 -m pip install pyinstaller
 py -3 -m PyInstaller --noconfirm --onefile --windowed --name DeskPool --icon assets/deskpool.ico --add-data "assets/deskpool.png:assets" windows\deskpool.py
 ```
 
-The executable is `dist\DeskPool.exe`. The [Build DeskPool workflow](.github/workflows/build.yml) builds downloadable Mac and Windows artifacts through GitHub Actions. Maintainers can publish verified bundles to Releases.
+The executable is `dist\DeskPool.exe`. The [Build DeskPool workflow](.github/workflows/build.yml) builds Mac and Windows packages. Download them from Artifacts in the Actions run.
+
+### Automatic releases
+
+After pushing the commit you want to release, push a tag that matches the app version in `build-app.sh`. For example:
+
+```bash
+git tag v1.5.1
+git push origin v1.5.1
+```
+
+The tag run publishes three ZIP files to [Releases](https://github.com/15589321245/DeskPool/releases) after the Apple silicon, Intel Mac, and Windows x64 builds all pass. Branch pushes, pull requests, and manual runs only build artifacts.
 
 ## Source and license
 
