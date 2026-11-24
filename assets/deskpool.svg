@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>DeskPool</title>
+  <desc>A white cue ball aims at a gold desktop icon on a deep green pool table.</desc>
+  <defs>
+    <linearGradient id="frame" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#2e514d"/>
+      <stop offset="1" stop-color="#102725"/>
+    </linearGradient>
+    <linearGradient id="felt" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#1b6354"/>
+      <stop offset="1" stop-color="#123a34"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffe5a1"/>
+      <stop offset="1" stop-color="#edaa55"/>
+    </linearGradient>
+    <radialGradient id="cue" cx=".32" cy=".27" r=".77">
+      <stop stop-color="#ffffff"/>
+      <stop offset=".62" stop-color="#edf5ed"/>
+      <stop offset="1" stop-color="#b3d2c3"/>
+    </radialGradient>
+  </defs>
+  <rect x="11" y="17" width="234" height="234" rx="56" fill="#071a19" opacity=".23"/>
+  <rect x="10" y="10" width="236" height="236" rx="56" fill="url(#frame)" stroke="#0b2421" stroke-width="2"/>
+  <rect x="24" y="24" width="208" height="208" rx="43" fill="url(#felt)" stroke="#569180" stroke-width="2"/>
+  <rect x="36" y="36" width="184" height="184" rx="34" fill="none" stroke="#8ad1b9" stroke-opacity=".24" stroke-width="2"/>
+  <g fill="#0c2522" stroke="#76b09b" stroke-opacity=".55" stroke-width="1.5">
+    <circle cx="48" cy="48" r="10"/><circle cx="128" cy="35" r="9"/>
+    <circle cx="208" cy="48" r="10"/><circle cx="48" cy="208" r="10"/>
+    <circle cx="128" cy="221" r="9"/><circle cx="208" cy="208" r="10"/>
+  </g>
+  <path d="M44 195 L62 178" fill="none" stroke="#da9a62" stroke-width="8" stroke-linecap="round"/>
+  <path d="M102 143 L138 109" fill="none" stroke="#d0ece0" stroke-opacity=".88" stroke-width="4"
+        stroke-dasharray="3 9" stroke-linecap="round"/>
+  <g transform="rotate(-12 168 88)">
+    <rect x="138" y="60" width="63" height="63" rx="17" fill="#0b2923" opacity=".55"/>
+    <rect x="135" y="55" width="63" height="63" rx="17" fill="url(#gold)" stroke="#ffedba" stroke-width="2"/>
+    <path d="M152 85h29m-14.5-14.5v29" stroke="#744a25" stroke-width="2" stroke-linecap="round" opacity=".5"/>
+    <circle cx="166.5" cy="85" r="10.5" fill="#fbd48c" stroke="#744a25" stroke-width="2.8"/>
+    <circle cx="166.5" cy="85" r="3.5" fill="#744a25"/>
+  </g>
+  <circle cx="83" cy="167" r="25" fill="#0b2923" opacity=".55"/>
+  <circle cx="81" cy="161" r="25" fill="url(#cue)" stroke="#f2fff4" stroke-width="1.4"/>
+  <ellipse cx="73" cy="151" rx="9" ry="5" fill="#fff" opacity=".72" transform="rotate(-33 73 151)"/>
+</svg>

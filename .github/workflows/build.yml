@@ -1,0 +1,53 @@
+name: Build DeskPool
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mac:
+    strategy:
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift run PhysicsTests
+      - run: ./build-app.sh
+      - run: |
+          codesign --verify --deep --strict build/DesktopIconBilliards.app
+          ditto -c -k --sequesterRsrc --keepParent build/DesktopIconBilliards.app DeskPool-macOS-${{ matrix.arch }}.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeskPool-macOS-${{ matrix.arch }}
+          path: DeskPool-macOS-${{ matrix.arch }}.zip
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - run: python -m unittest discover -s windows -v
+      - name: Check Tk and Windows desktop icons
+        run: python windows/smoke_test.py
+      - run: python -m pip install pyinstaller
+      - run: python -m PyInstaller --noconfirm --onefile --windowed --name DeskPool --icon assets/deskpool.ico --add-data "assets/deskpool.png:assets" windows/deskpool.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeskPool-Windows-x64
+          path: |
+            dist/DeskPool.exe
+            README.md
+            README.en.md
+            LICENSE

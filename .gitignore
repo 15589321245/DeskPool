@@ -1,0 +1,13 @@
+.DS_Store
+.build/
+.build-*/
+.swiftpm/
+.cache/
+build/
+dist/
+out/
+__pycache__/
+*.py[cod]
+*.app/
+*.exe
+.venv/
