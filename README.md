@@ -24,16 +24,14 @@ DeskPool 把本机桌面图标变成台球。macOS 版在桌面上运行，可�
 
 1. **下载安装。** 在 [Releases](https://github.com/15589321245/DeskPool/releases) 选择与芯片匹配的 ZIP（Apple 芯片用 `arm64`，Intel 用 `x64`）。解压后把 `DesktopIconBilliards.app` 拖进「应用程序」，再双击打开一次。
 2. **如果首次打开被拦截。** 当前构建未经过 Apple 公证，系统可能提示无法验证该 App。如果确认安装包来自本仓库的 Releases 且未被篡改，打开 **系统设置 → 隐私与安全性**，滚动到「安全性」，在 `DesktopIconBilliards` 旁点 **仍要打开**，然后按系统提示确认。[Apple 的首次打开说明](https://support.apple.com/zh-cn/102445)
-3. **按用途授权。** 创建或加入房间时，如果系统询问是否允许访问本地网络，请选择允许。要用真实桌面图标时，请允许访问桌面文件夹。也可以用 `--demo` 玩示例图标。
+3. **按用途授权。** 创建或加入房间时，如果系统询问是否允许访问本地网络，请选择允许。Mac 版使用本机桌面图标，请允许访问桌面文件夹并保留至少一个桌面文件或文件夹。
 4. **打开回合通知（可选）。** 首次创建或加入联机房间时，允许「桌面图标台球」发送通知。如果以前关闭过，在 **系统设置 → 通知 → 桌面图标台球** 打开 **允许通知**。要在屏幕右上角弹出提示，请启用桌面通知或选择「横幅／提醒」。如果列表里没找到 App，先创建或加入一次房间，让系统收到通知授权请求。[Apple 的通知设置说明](https://support.apple.com/zh-cn/guide/mac-help/mh40583/mac)
 
-双击应用进入单机模式。也可以从终端启动：
+双击应用后选择「创建房间」或「加入房间」。加入时可以搜索局域网房间，也可以直接输入房主 IP。一个人也可以创建房间并开始练习。
 
-```bash
-open /Applications/DesktopIconBilliards.app --args --demo
-```
+启动窗口可选球桌大小，默认 90%，范围 60%～100%。球桌保持 16:9 并等比缩放。游戏中可按 `-` 缩小、按 `+` 或 `=` 放大，也可按 `H` 用面板按钮调整。大小会记在当前 Mac 上。
 
-命令返回提示符后，最小化终端或露出桌面。球桌显示在桌面图层，普通窗口会盖住它。如果已经启动过游戏，先按 `Ctrl+Option+X` 退出，再执行命令切换到演示或联机模式。
+球桌显示在桌面图层，普通窗口会盖住它。如果已经启动过游戏，先按 `Ctrl+Option+X` 退出，再重新打开选择房间。
 
 ### Windows
 
@@ -52,7 +50,7 @@ Windows 默认按系统语言选择界面。可用 `--lang zh` 或 `--lang en` �
 
 ## 第一次跨平台联机
 
-1. **用 Mac 创建房间。** 让所有设备连到同一个局域网。退出已运行的旧版，再在 Mac 终端执行：
+1. **用 Mac 创建房间。** 让所有设备连到同一个局域网。双击应用选「创建房间」，也可以在 Mac 终端执行：
 
    ```bash
    open /Applications/DesktopIconBilliards.app --args --host
@@ -65,7 +63,7 @@ Windows 默认按系统语言选择界面。可用 `--lang zh` 或 `--lang en` �
    open /Applications/DesktopIconBilliards.app --args --join 192.168.0.75
    ```
 
-   Mac 也可以用 `--discover` 搜索房间。Windows 客户端可加入 Mac 1.5.0 或 1.5.1 创建的房间。
+   Mac 也可以双击后选择「加入房间」，或用 `--discover` 搜索。Windows 客户端兼容 Mac 1.5.0～1.5.2 的房间。
 4. **开始。** 待玩家出现在 Mac 准备室，房主选模式并点「开始游戏」。玩家无需就绪。比赛开始后只有已参赛玩家可以重连，新玩家可在一局结束后加入。
 
 ### 击球与规则
@@ -85,7 +83,8 @@ Windows 默认按系统语言选择界面。可用 `--lang zh` 或 `--lang en` �
 | `G` | 开关辅助线 |
 | `Esc` | 退出 |
 | Mac `H` | 打开操作面板和联机诊断 |
-| Mac `R` | 单机重开或由房主返回准备室 |
+| Mac `-` / `+` | 等比例缩小或放大球桌 |
+| Mac `R` | 房主返回准备室 |
 | Mac `Ctrl+Option+D` | 暂时操作桌面，再按一次返回 |
 | Windows `F11` | 切换窗口和全屏 |
 
@@ -126,8 +125,8 @@ Windows EXE 位于 `dist\DeskPool.exe`。[Build DeskPool 工作流](.github/work
 将待发布的代码提交推送到仓库后，推送一个与 `build-app.sh` 中应用版本一致的标签，例如：
 
 ```bash
-git tag v1.5.1
-git push origin v1.5.1
+git tag v1.5.2
+git push origin v1.5.2
 ```
 
 标签触发的构建在 Apple 芯片、Intel Mac 和 Windows x64 三项任务全部成功后，会把三个 ZIP 自动发布到 [Releases](https://github.com/15589321245/DeskPool/releases)。分支推送、拉取请求和手动运行只构建。

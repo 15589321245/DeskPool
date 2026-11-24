@@ -10,6 +10,7 @@ final class GameView: NSView {
     let table: BilliardsMotion
     private var background: NSImage
     private let backgroundScale: CGFloat
+    private let logicalSize: CGSize
     private let whiteImage: NSImage
     private let introOrigins: [V2]
     private var introElapsed: Double? = 0
@@ -25,6 +26,8 @@ final class GameView: NSView {
     private var turnBannerUntil = 0.0
     private var celebrationStarted = 0.0
     private(set) var desktopAccess = false
+    private(set) var tableZoom = 100
+    var onTableZoomChanged: (Int) -> Void = { _ in }
     var buttons: [(rect: CGRect, action: () -> Void)] = []
     var onQuit: () -> Void = {}
     var onDesktopAccess: () -> Void = {}
@@ -47,7 +50,7 @@ final class GameView: NSView {
         didSet {
             if oldValue != networkDiagnostics && hudVisible {
                 setNeedsDisplay(CGRect(x: table.bounds.left + 18, y: table.bounds.top + 18,
-                                       width: 372, height: 126))
+                                       width: 372, height: 162))
             }
         }
     }
@@ -72,6 +75,8 @@ final class GameView: NSView {
 
     private static let introDuration = 1.25
     private static let introStagger = 0.025
+    static let defaultTableZoom = 90
+    static let tableZoomLevels = Array(stride(from: 60, through: 100, by: 5))
 
     init(items: [DesktopItem], table: BilliardsMotion, screen: NSScreen) {
         self.items = items
@@ -79,12 +84,12 @@ final class GameView: NSView {
         iconImages = cached
         ownedIconImages = cached.map { Artwork.outlinedIcon($0) }
         self.table = table
+        logicalSize = screen.frame.size
         backgroundScale = screen.backingScaleFactor
         background = Artwork.tableBackground(size: screen.frame.size,
                                              scale: screen.backingScaleFactor,
                                              table: table)
-        whiteImage = Artwork.cachedIcon(DesktopItems.load(demo: true).first?.image
-                                        ?? Artwork.cueBall(radius: table.whiteRadius))
+        whiteImage = Artwork.cachedIcon(Artwork.cueBall(radius: table.whiteRadius))
         let count = max(1, items.count)
         let columns = max(1, Int((Double(count) * 1.7).squareRoot().rounded(.up)))
         let rows = max(1, Int((Double(count) / Double(columns)).rounded(.up)))
@@ -103,6 +108,25 @@ final class GameView: NSView {
 
     override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { true }
+
+    func setTableZoom(_ percent: Int) {
+        guard Self.tableZoomLevels.contains(percent) else { return }
+        tableZoom = percent
+        let ratio = CGFloat(percent) / 100
+        let parent = superview?.bounds ?? CGRect(origin: .zero, size: logicalSize)
+        let size = CGSize(width: logicalSize.width * ratio, height: logicalSize.height * ratio)
+        frame = CGRect(x: parent.midX - size.width / 2, y: parent.midY - size.height / 2,
+                       width: size.width, height: size.height)
+        // Preserve logical coordinates so physics and mouse input use the same scale.
+        bounds = CGRect(origin: .zero, size: logicalSize)
+        if heldSince != nil {
+            heldSince = nil
+            chargeOrigin = nil
+            table.setCharge(0)
+        }
+        onTableZoomChanged(percent)
+        needsDisplay = true
+    }
 
     func start() {
         let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in self?.tick() }
@@ -479,7 +503,7 @@ final class GameView: NSView {
     private func drawHUD() {
         let bounds = table.bounds
         let frame = CGRect(x: bounds.left + 18, y: bounds.top + 18, width: 372,
-                           height: networkDiagnostics == nil ? 104 : 126)
+                           height: networkDiagnostics == nil ? 134 : 162)
         let path = NSBezierPath(roundedRect: frame, xRadius: 12, yRadius: 12)
         Artwork.color(13, 25, 23, 235).setFill(); path.fill()
         Artwork.color(105, 221, 179, 120).setStroke(); path.lineWidth = 1; path.stroke()
@@ -503,8 +527,23 @@ final class GameView: NSView {
             buttons.append((rect, action))
             x += width + 8
         }
+        let zoomY = frame.minY + 97
+        let smaller = CGRect(x: frame.minX + 112, y: zoomY, width: 52, height: 25)
+        let larger = CGRect(x: frame.minX + 172, y: zoomY, width: 52, height: 25)
+        text("球桌 \(tableZoom)%", CGPoint(x: frame.minX + 14, y: zoomY + 5),
+             font: .systemFont(ofSize: 12), color: Artwork.color(178, 214, 200))
+        button("缩小", rect: smaller)
+        button("放大", rect: larger)
+        buttons.append((smaller, { [weak self] in
+            guard let self else { return }
+            self.setTableZoom(self.tableZoom - 5)
+        }))
+        buttons.append((larger, { [weak self] in
+            guard let self else { return }
+            self.setTableZoom(self.tableZoom + 5)
+        }))
         if let networkDiagnostics {
-            text(networkDiagnostics, CGPoint(x: frame.minX + 14, y: frame.minY + 96),
+            text(networkDiagnostics, CGPoint(x: frame.minX + 14, y: frame.minY + 130),
                  font: .systemFont(ofSize: 11), color: Artwork.color(178, 214, 200))
         }
     }
@@ -804,6 +843,8 @@ final class GameView: NSView {
         case "r": restart()
         case "g": guideEnabled.toggle(); needsDisplay = true
         case "h": hudVisible.toggle(); needsDisplay = true
+        case "-": setTableZoom(tableZoom - 5)
+        case "=", "+": setTableZoom(tableZoom + 5)
         default:
             if event.keyCode == 53 { onQuit() } else { super.keyDown(with: event) }
         }

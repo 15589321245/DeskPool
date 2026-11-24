@@ -55,6 +55,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificat
     private var lastDatagramAt = 0.0
     private var roomAdvertised = false
     private var notificationPermissionDenied = false
+    private static let tableZoomKey = "TableZoom"
     private let localName = Host.current().localizedName ?? ProcessInfo.processInfo.hostName
     private lazy var registry = PlayerRegistry(hostName: localName)
     private lazy var localIdentity: String = {
@@ -66,35 +67,30 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificat
     }()
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
-        let arguments = CommandLine.arguments
-        let joining = arguments.firstIndex(of: "--join").flatMap {
-            arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil
+        let savedZoom = UserDefaults.standard.integer(forKey: Self.tableZoomKey)
+        let zoom = GameView.tableZoomLevels.contains(savedZoom) ? savedZoom : GameView.defaultTableZoom
+        guard let launch = RoomDiscovery.launch(arguments: CommandLine.arguments, zoom: zoom) else {
+            NSApp.terminate(nil)
+            return
         }
-        let hosting = arguments.contains("--host")
-        var discovered: NWEndpoint?
-        if arguments.contains("--discover") {
-            guard let selected = RoomDiscovery.chooseRoom() else { NSApp.terminate(nil); return }
-            discovered = selected
-        }
-        let networked = hosting || joining != nil || discovered != nil
-        let samples = DesktopItems.load(demo: arguments.contains("--demo"))
-        let items = networked && !samples.isEmpty
-            ? (0..<21).map { samples[$0 % samples.count] } : samples
-        guard !items.isEmpty else {
+        let samples = DesktopItems.load()
+        guard !samples.isEmpty else {
             let alert = NSAlert()
             alert.messageText = "桌面上没有图标"
-            alert.informativeText = "请检查桌面是否有文件以及是否允许读取桌面;也可以加 --demo 参数使用示例图标。"
+            alert.informativeText = "请在桌面放至少一个文件或文件夹，并在系统设置中允许桌面文件夹访问，然后重新打开 DeskPool。"
+            NSApp.activate(ignoringOtherApps: true)
             alert.runModal()
             NSApp.terminate(nil)
             return
         }
+        let items = (0..<21).map { samples[$0 % samples.count] }
         guard let screen = NSScreen.main else { NSApp.terminate(nil); return }
         let frame = screen.frame, visible = screen.visibleFrame
         let work = TableRect(Double(visible.minX - frame.minX), Double(frame.maxY - visible.maxY),
                              Double(visible.maxX - frame.minX), Double(frame.maxY - visible.minY))
-        let table = BilliardsMotion(workArea: work, sizes: items.map(\.size),
-                                    aspectRatio: networked ? 16.0 / 9.0 : nil)
+        let table = BilliardsMotion(workArea: work, sizes: items.map(\.size), aspectRatio: 16.0 / 9.0)
         let view = GameView(items: items, table: table, screen: screen)
+        view.onTableZoomChanged = { UserDefaults.standard.set($0, forKey: Self.tableZoomKey) }
         self.view = view
         view.onQuit = { NSApp.terminate(nil) }
         view.onDesktopAccess = { [weak self] in
@@ -107,7 +103,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificat
             }
             self?.setDesktopAccess(true)
         }
-        if networked { setupNetwork(view: view, table: table, joining: joining, endpoint: discovered) }
+        setupNetwork(view: view, table: table, endpoint: launch.endpoint)
 
         let panel = OverlayPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel],
                                  backing: .buffered, defer: false)
@@ -123,9 +119,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificat
         panel.hidesOnDeactivate = false
         panel.isMovable = false
         panel.becomesKeyOnlyIfNeeded = false
-        panel.contentView = view
+        let canvas = NSView(frame: CGRect(origin: .zero, size: frame.size))
+        panel.contentView = canvas
+        canvas.addSubview(view)
+        view.setTableZoom(launch.zoom)
         panel.orderFrontRegardless()
         panel.makeKey()
+        panel.makeFirstResponder(view)
         view.start()
         self.panel = panel
         self.view = view
@@ -174,10 +174,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificat
         if enabled { panel.resignKey() } else { panel.makeKey() }
     }
 
-    private func setupNetwork(view: GameView, table: BilliardsMotion, joining: String?, endpoint: NWEndpoint?) {
+    private func setupNetwork(view: GameView, table: BilliardsMotion, endpoint: NWEndpoint?) {
         do {
-            let guest = joining != nil || endpoint != nil
-            let session = try LANSession(host: joining, endpoint: endpoint)
+            let guest = endpoint != nil
+            let session = try LANSession(host: nil, endpoint: endpoint)
             self.session = session
             view.isNetworkGuest = guest
             view.canPlay = false

@@ -24,16 +24,14 @@ Requires macOS 13 or later.
 
 1. **Download and install.** Choose the ZIP for your Mac from [Releases](https://github.com/15589321245/DeskPool/releases). Use `arm64` for Apple silicon or `x64` for Intel. Extract it, move `DesktopIconBilliards.app` to Applications, and double-click to open it once.
 2. **If macOS blocks the first launch.** The current builds are not notarized by Apple, so macOS may say it cannot verify the app. If you trust the download from this repository's Releases page and know it has not been modified, go to **System Settings → Privacy & Security**, scroll to Security, click **Open Anyway** for `DesktopIconBilliards`, and confirm the prompt. [Apple's guide to opening apps](https://support.apple.com/en-us/102445)
-3. **Grant permissions as needed.** Allow local network access if prompted when hosting or joining. Allow Desktop folder access if you want to play with your own desktop icons. Use `--demo` to play with sample icons.
+3. **Grant permissions as needed.** Allow local network access if prompted when hosting or joining. The Mac app uses your desktop icons, so allow Desktop folder access and keep at least one file or folder there.
 4. **Enable turn notifications (optional).** Allow notifications from Desktop Icon Billiards when you first host or join a room. To enable them later, open **System Settings → Notifications → Desktop Icon Billiards** (which may appear as **桌面图标台球**) and turn on **Allow Notifications**. Enable desktop alerts or choose Banners or Alerts to see a pop-up. If the app is missing from the list, host or join a room once to request permission. [Apple's notification settings guide](https://support.apple.com/guide/mac-help/mh40583/mac)
 
-Double-click the app for solo play, or launch the icon demo from Terminal:
+Double-click the app and choose **Create Room** or **Join Room**. Join by picking a discovered room or entering the host's IP. You can also start a room by yourself to practice.
 
-```bash
-open /Applications/DesktopIconBilliards.app --args --demo
-```
+Choose a table size from 60% to 100% before entering a room. The default is 90%, and the table keeps its 16:9 aspect ratio. During play, press `-` to shrink it or `+` / `=` to enlarge it, or use the buttons in the `H` panel. The setting is saved on your Mac.
 
-When the prompt returns, minimize Terminal or show the desktop. The table sits on the desktop layer, behind ordinary windows. If a game is already running, press `Ctrl+Option+X` to quit it before launching in demo or LAN mode.
+The table sits on the desktop layer, behind ordinary windows. If a game is already running, press `Ctrl+Option+X` to quit it before reopening the app to choose a room.
 
 ### Windows
 
@@ -52,7 +50,7 @@ The client picks Chinese or English from the system locale. Use `--lang zh` or `
 
 ## First cross-platform game
 
-1. **Start the room on a Mac.** Connect everyone to the same LAN. Quit any running copy, then run in Terminal:
+1. **Start the room on a Mac.** Connect everyone to the same LAN. Double-click the app and choose **Create Room**, or run in Terminal:
 
    ```bash
    open /Applications/DesktopIconBilliards.app --args --host
@@ -65,7 +63,7 @@ The client picks Chinese or English from the system locale. Use `--lang zh` or `
    open /Applications/DesktopIconBilliards.app --args --join 192.168.0.75
    ```
 
-   Mac players can also browse rooms with `--discover`. The Windows client can join rooms hosted by Mac 1.5.0 or 1.5.1.
+   Mac players can also choose **Join Room** after opening the app or browse rooms with `--discover`. The Windows client can join rooms hosted by Mac versions 1.5.0 through 1.5.2.
 4. **Start the round.** After players appear in the Mac lobby, the host selects a mode and clicks Start. A round accepts returning participants during play. New players can join after the round ends.
 
 ### Controls and rules
@@ -85,7 +83,8 @@ The client picks Chinese or English from the system locale. Use `--lang zh` or `
 | `G` | Toggle aim guide |
 | `Esc` | Quit |
 | Mac `H` | Show controls and network diagnostics |
-| Mac `R` | Restart solo play or return to the lobby as host |
+| Mac `-` / `+` | Shrink or enlarge the table proportionally |
+| Mac `R` | Return to the lobby as host |
 | Mac `Ctrl+Option+D` | Switch between desktop access and play |
 | Windows `F11` | Toggle full screen |
 
@@ -126,8 +125,8 @@ The executable is `dist\DeskPool.exe`. The [Build DeskPool workflow](.github/wor
 After pushing the commit you want to release, push a tag that matches the app version in `build-app.sh`. For example:
 
 ```bash
-git tag v1.5.1
-git push origin v1.5.1
+git tag v1.5.2
+git push origin v1.5.2
 ```
 
 The tag run publishes three ZIP files to [Releases](https://github.com/15589321245/DeskPool/releases) after the Apple silicon, Intel Mac, and Windows x64 builds all pass. Branch pushes, pull requests, and manual runs only build artifacts.

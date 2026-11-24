@@ -1,7 +1,8 @@
 @testable import BilliardsApp
-import BilliardsCore
+@testable import BilliardsCore
 import AppKit
 import Network
+import UniformTypeIdentifiers
 
 var failures = 0
 func check(_ condition: Bool, _ message: String) {
@@ -19,7 +20,11 @@ guard let screen = NSScreen.main else {
 }
 let frame = screen.frame
 let work = TableRect(0, 0, Double(frame.width), Double(frame.height))
-let items = DesktopItems.load(demo: true)
+let icon = NSWorkspace.shared.icon(for: .folder)
+let items = (0..<21).map { index in
+    let name = "Test \(index)"
+    return DesktopItem(name: name, url: URL(fileURLWithPath: "/tmp/\(name)"), image: icon)
+}
 let table = BilliardsMotion(workArea: work, sizes: items.map(\.size))
 let view = GameView(items: items, table: table, screen: screen)
 
@@ -47,6 +52,15 @@ func settle(_ seconds: Double) {
         now += 1.0 / 60
         table.step(1.0 / 60, now: now)
     }
+}
+
+do {
+    check(RoomDiscovery.request(for: ["DeskPool"]) == .menu, "double-click opens the room selection")
+    check(RoomDiscovery.request(for: ["DeskPool", "--demo"]) == .menu, "old demo command opens the room selection")
+    check(RoomDiscovery.request(for: ["DeskPool", "--host"]) == .host, "host command opens a room directly")
+    check(RoomDiscovery.request(for: ["DeskPool", "--discover"]) == .browse, "discover command opens room search")
+    check(RoomDiscovery.request(for: ["DeskPool", "--join", "192.168.0.75"]) == .join("192.168.0.75"),
+          "IP command joins directly")
 }
 
 // Moving the mouse aims the cue ball.
@@ -133,7 +147,26 @@ do {
     check(quit, "Esc triggers quit")
 }
 
-// One host can assign distinct player IDs and broadcast a shared state to two guests.
+do {
+    table.reset()
+    let canvas = NSView(frame: CGRect(origin: .zero, size: frame.size))
+    canvas.addSubview(view)
+    view.setTableZoom(75)
+    view.keyDown(with: key("=", 24))
+    check(view.tableZoom == 80 && abs(view.bounds.width - frame.width) < 1e-6 &&
+          abs(view.bounds.height - frame.height) < 1e-6 &&
+          abs(view.frame.width / frame.width - 0.8) < 1e-6 &&
+          abs(view.frame.height / frame.height - 0.8) < 1e-6,
+          "zoom shortcut scales both axes equally (zoom \(view.tableZoom)%, frame \(view.frame.size), bounds \(view.bounds.size))")
+    let target = view.convert(CGPoint(x: table.white.x + 200, y: table.white.y + 100), to: nil)
+    view.mouseMoved(with: mouse(.mouseMoved, target.x, frame.height - target.y))
+    check(table.aim.distance(to: V2(2 / sqrt(5), 1 / sqrt(5))) < 1e-6,
+          "scaled view maps the mouse back to the same shot angle")
+    view.setTableZoom(100)
+    view.removeFromSuperview()
+}
+
+// The host can allocate equal groups and let returning players rejoin.
 do {
     var room = RoomGame()
     room.updateLobbyPlayers([0, 1])

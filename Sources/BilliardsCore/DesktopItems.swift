@@ -14,11 +14,7 @@ public struct DesktopItem {
 /// The real desktop population: `~/Desktop` plus the volumes Finder shows on the
 /// desktop. Icons come from the workspace, so files keep their own artwork.
 public enum DesktopItems {
-    public static func load(demo: Bool) -> [DesktopItem] {
-        demo ? demoItems() : realItems()
-    }
-
-    private static func realItems() -> [DesktopItem] {
+    public static func load() -> [DesktopItem] {
         var urls: [URL] = []
         let desktop = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
         if let desktop,
@@ -47,17 +43,6 @@ public enum DesktopItems {
                 .volumeIsInternal ?? false
             return internalDisk ? showHard : showExternal
         }
-    }
-
-    private static func demoItems() -> [DesktopItem] {
-        let apps = (try? FileManager.default.contentsOfDirectory(
-            at: URL(fileURLWithPath: "/Applications"), includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles])) ?? []
-        return apps
-            .filter { $0.pathExtension == "app" }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
-            .prefix(21)
-            .map { item(for: $0) }
     }
 
     private static func item(for url: URL) -> DesktopItem {
