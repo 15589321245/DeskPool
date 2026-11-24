@@ -20,13 +20,20 @@ DeskPool turns local desktop icons into pool balls. The macOS app plays on the d
 
 ### macOS
 
-Requires macOS 13 or later. The universal ZIP supports Intel and Apple silicon. Extract the Mac ZIP from Releases and move `DesktopIconBilliards.app` to Applications. Allow local network access when prompted. Playing with desktop icons requires access to the Desktop folder. The demo works with sample icons.
+Requires macOS 13 or later.
+
+1. **Download and install.** Choose the ZIP for your Mac from [Releases](https://github.com/15589321245/DeskPool/releases). Use `arm64` for Apple silicon or `x64` for Intel. Extract it, move `DesktopIconBilliards.app` to Applications, and double-click to open it once.
+2. **If macOS blocks the first launch.** The current builds are not notarized by Apple, so macOS may say it cannot verify the app. If you trust the download from this repository's Releases page and know it has not been modified, go to **System Settings → Privacy & Security**, scroll to Security, click **Open Anyway** for `DesktopIconBilliards`, and confirm the prompt. [Apple's guide to opening apps](https://support.apple.com/en-us/102445)
+3. **Grant permissions as needed.** Allow local network access if prompted when hosting or joining. Allow Desktop folder access if you want to play with your own desktop icons. Use `--demo` to play with sample icons.
+4. **Enable turn notifications (optional).** Allow notifications from Desktop Icon Billiards when you first host or join a room. To enable them later, open **System Settings → Notifications → Desktop Icon Billiards** (which may appear as **桌面图标台球**) and turn on **Allow Notifications**. Enable desktop alerts or choose Banners or Alerts to see a pop-up. If the app is missing from the list, host or join a room once to request permission. [Apple's notification settings guide](https://support.apple.com/guide/mac-help/mh40583/mac)
 
 Double-click the app for solo play, or launch the icon demo from Terminal:
 
 ```bash
 open /Applications/DesktopIconBilliards.app --args --demo
 ```
+
+When the prompt returns, minimize Terminal or show the desktop. The table sits on the desktop layer, behind ordinary windows. If a game is already running, press `Ctrl+Option+X` to quit it before launching in demo or LAN mode.
 
 ### Windows
 

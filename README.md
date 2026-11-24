@@ -20,13 +20,20 @@ DeskPool 把本机桌面图标变成台球。macOS 版在桌面上运行，可�
 
 ### macOS
 
-需要 macOS 13 或更新版本。通用包支持 Intel 和 Apple 芯片。解压发行版中的 Mac ZIP，把 `DesktopIconBilliards.app` 拖进「应用程序」。首次启动根据提示允许访问本地网络。真实桌面模式需要读取桌面图标，也可以用 `--demo` 玩示例图标。
+需要 macOS 13 或更新版本。
+
+1. **下载安装。** 在 [Releases](https://github.com/15589321245/DeskPool/releases) 选择与芯片匹配的 ZIP（Apple 芯片用 `arm64`，Intel 用 `x64`）。解压后把 `DesktopIconBilliards.app` 拖进「应用程序」，再双击打开一次。
+2. **如果首次打开被拦截。** 当前构建未经过 Apple 公证，系统可能提示无法验证该 App。如果确认安装包来自本仓库的 Releases 且未被篡改，打开 **系统设置 → 隐私与安全性**，滚动到「安全性」，在 `DesktopIconBilliards` 旁点 **仍要打开**，然后按系统提示确认。[Apple 的首次打开说明](https://support.apple.com/zh-cn/102445)
+3. **按用途授权。** 创建或加入房间时，如果系统询问是否允许访问本地网络，请选择允许。要用真实桌面图标时，请允许访问桌面文件夹。也可以用 `--demo` 玩示例图标。
+4. **打开回合通知（可选）。** 首次创建或加入联机房间时，允许「桌面图标台球」发送通知。如果以前关闭过，在 **系统设置 → 通知 → 桌面图标台球** 打开 **允许通知**。要在屏幕右上角弹出提示，请启用桌面通知或选择「横幅／提醒」。如果列表里没找到 App，先创建或加入一次房间，让系统收到通知授权请求。[Apple 的通知设置说明](https://support.apple.com/zh-cn/guide/mac-help/mh40583/mac)
 
 双击应用进入单机模式。也可以从终端启动：
 
 ```bash
 open /Applications/DesktopIconBilliards.app --args --demo
 ```
+
+命令返回提示符后，最小化终端或露出桌面。球桌显示在桌面图层，普通窗口会盖住它。如果已经启动过游戏，先按 `Ctrl+Option+X` 退出，再执行命令切换到演示或联机模式。
 
 ### Windows
 
