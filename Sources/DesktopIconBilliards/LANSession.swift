@@ -3,7 +3,7 @@ import Network
 import BilliardsCore
 
 struct LANPacket: Codable {
-    static let currentProtocolVersion = 5
+    static let currentProtocolVersion = 6
 
     var kind: String
     var snapshot: MotionSnapshot? = nil

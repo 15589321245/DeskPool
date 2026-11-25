@@ -12,7 +12,7 @@ DeskPool turns local desktop icons into pool balls. The macOS app plays on the d
 | --- | --- | --- |
 | Solo play and hosting | Supported | Use a Mac to host |
 | Joining a Mac room | Room discovery or direct IP | Direct IPv4 |
-| Assigned Balls, Free Scoring, Called Ball | Supported | Uses the host's mode |
+| Assigned Balls, Free Scoring, Called Ball, Six Pockets | Supported | Uses the host's mode |
 | Turn reminder | In-game message, sound, and macOS notification | In-window message and sound |
 | Display | Transparent desktop layer | Windowed or full screen |
 
@@ -56,14 +56,14 @@ The client picks Chinese or English from the system locale. Use `--lang zh` or `
    open /Applications/DesktopIconBilliards.app --args --host
    ```
 
-2. **Find the host's IPv4 address.** On the host Mac, open the active connection in System Settings → Network and check its TCP/IP details. Replace the example `192.168.0.75` below with this address.
+2. **Copy the host's IPv4 address.** Click **Copy IP** in the Mac host's lobby and share it with the guests. If the address is unavailable, check the active connection's TCP/IP details in System Settings → Network. Replace the example `192.168.0.75` below with this address.
 3. **Join from Windows.** Open DeskPool, enter the host's IPv4 address, and click Join. Other Macs can use:
 
    ```bash
    open /Applications/DesktopIconBilliards.app --args --join 192.168.0.75
    ```
 
-   Mac players can also choose **Join Room** after opening the app or browse rooms with `--discover`. The Windows client can join rooms hosted by Mac versions 1.5.0 through 1.5.2.
+   Mac players can also choose **Join Room** after opening the app or browse rooms with `--discover`. Starting with 1.6.0, the Mac host and all Mac and Windows guests need 1.6.0 or a newer version with a matching LAN protocol.
 4. **Start the round.** After players appear in the Mac lobby, the host selects a mode and clicks Start. A round accepts returning participants during play. New players can join after the round ends.
 
 ### Controls and rules
@@ -77,6 +77,7 @@ The client picks Chinese or English from the system locale. Use `--lang zh` or `
 | Assigned Balls | Green markings identify your balls. Keep shooting after a legal pot. The first player to clear their own balls wins. An opponent's ball or a neutral ball is respotted and the next player gets ball in hand. |
 | Free Scoring | Every icon ball counts. Keep shooting after a legal pot. The final ranking uses the number of balls potted. |
 | Called Ball | Look for the gold Target badge. Pot only the target to score one point and keep shooting at a new target. Potting another ball or the cue ball respots all icon balls from that shot and gives the next player ball in hand. First to five wins. Up to five players. |
+| Six Pockets | Each player lights pockets independently. Be first to light four different pockets to win. Dashed gold rings mark unlit pockets and solid green rings mark lit ones. Light a new pocket to keep shooting. A repeat pot or miss passes the turn. A scratch respots the icons from that shot and gives the next player ball in hand. If the table is cleared, the player with the most lit pockets wins, with ties allowed. |
 
 | Key | Action |
 | --- | --- |
@@ -125,8 +126,8 @@ The executable is `dist\DeskPool.exe`. The [Build DeskPool workflow](.github/wor
 After pushing the commit you want to release, push a tag that matches the app version in `build-app.sh`. For example:
 
 ```bash
-git tag v1.5.2
-git push origin v1.5.2
+git tag v1.6.0
+git push origin v1.6.0
 ```
 
 The tag run publishes three ZIP files to [Releases](https://github.com/15589321245/DeskPool/releases) after the Apple silicon, Intel Mac, and Windows x64 builds all pass. Branch pushes, pull requests, and manual runs only build artifacts.

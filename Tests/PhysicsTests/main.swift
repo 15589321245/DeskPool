@@ -130,7 +130,10 @@ do {
     table.shoot(power: 0.7)
     run(table, seconds: 20, now: &now)
     check(table.pocketedIcons == 1, "icon counted as pocketed")
+    check(table.pocketedAt == [1: 1], "physics records the pocket that captured the moving icon")
     check(table.state == .finished, "clearing the table finishes the round")
+    table.reset()
+    check(table.pocketedAt.isEmpty, "reset clears pocket records")
 }
 
 // Collision geometry follows the visible icon size, without a large invisible gap.

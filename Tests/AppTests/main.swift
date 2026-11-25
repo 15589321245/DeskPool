@@ -184,8 +184,23 @@ do {
 }
 
 do {
+    let addresses = [(interface: "utun3", address: "10.0.0.4"),
+                     (interface: "en0", address: "192.168.0.75"),
+                     (interface: "en1", address: "192.168.1.80"),
+                     (interface: "en2", address: "169.254.2.5")]
+    check(LANAddress.preferred(from: addresses, primaryInterface: "en1") == "192.168.1.80",
+          "lobby shows the primary LAN address")
+    check(LANAddress.preferred(from: addresses, primaryInterface: "utun3") == "192.168.0.75" &&
+          LANAddress.preferred(from: [addresses[0], addresses[3]], primaryInterface: "utun3") == nil,
+          "lobby skips VPN addresses and IPv4 self-assigned addresses")
+}
+
+do {
     view.roomState = RoomGame()
     view.localPlayerID = 0
+    view.hostLANAddress = "192.168.0.75"
+    let pasteboard = NSPasteboard.withUniqueName()
+    view.copyLANAddress = { pasteboard.setString($0, forType: .string) }
     var action = ""
     view.onRoomAction = { action = $0 }
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(frame.width),
@@ -197,13 +212,19 @@ do {
     view.draw(view.bounds)
     NSGraphicsContext.restoreGraphicsState()
     let b = table.bounds
-    let height = 173.0
+    let height = 209.0
     let start = CGPoint(x: b.left + b.width / 2 - 225 + 164 + 50,
                         y: b.top + b.height / 2 - height / 2 + height - 40 + 13)
     view.mouseDown(with: mouse(.leftMouseDown, start.x, start.y))
     check(action == "start", "host lobby presents a start button without a readiness step")
+    let copy = CGPoint(x: b.left + b.width / 2 + 225 - 102 + 43,
+                       y: b.top + b.height / 2 - height / 2 + 65 + 13)
+    view.mouseDown(with: mouse(.leftMouseDown, copy.x, copy.y))
+    check(pasteboard.string(forType: .string) == "192.168.0.75",
+          "host lobby copy button copies exactly the address shown")
     view.roomState = nil
     view.localPlayerID = -1
+    view.hostLANAddress = nil
 }
 
 do {
@@ -288,6 +309,65 @@ do {
                   room.targetBall == nil, "fifth legal point ends the round and declares the winner")
         }
     }
+}
+
+// Resolve actual pocket events with the room rules, including a scratch and a shared pocket.
+do {
+    var room = RoomGame()
+    for _ in 0..<3 { room.toggleMode() }
+    check(room.mode == .sixPockets, "host can select Six Pockets")
+    room.updateLobbyPlayers([0, 1])
+    let game = BilliardsMotion(workArea: work, sizes: Array(repeating: V2(64, 64), count: 9))
+    check(room.start(iconCount: game.icons.count), "Six Pockets starts with empty progress")
+
+    func pot(_ ball: Int, in pocket: Int, by player: Int, scratch: Bool = false) -> Int {
+        let before = game.sunk
+        let positions = game.icons.map(\.position)
+        let cue = game.white.position
+        game.icons[ball - 1].x = game.pockets[pocket].x
+        game.icons[ball - 1].y = game.pockets[pocket].y
+        if scratch {
+            game.white.x = game.pockets[5].x
+            game.white.y = game.pockets[5].y
+        }
+        var snapshot = game.snapshot()
+        snapshot.state = .rolling
+        game.apply(snapshot)
+        game.step(1.0 / 60, now: ProcessInfo.processInfo.systemUptime)
+        let outcome = room.settle(table: game, shooter: player, before: before, positions: positions,
+                                  scratched: game.whiteSunk, scoreBeforeShot: room.pocketsLit(by: player).count)
+        check(outcome.foul == scratch && outcome.restored, "Six Pockets settles the shot")
+        if scratch {
+            check(game.state == .ballInHand && game.pocketedAt[ball] == nil && !game.sunk.contains(ball),
+                  "scratch respots the icon, clears its pocket record, and gives ball in hand")
+            check(game.placeWhite(cue), "next player can place the cue ball")
+        }
+        return outcome.scored
+    }
+
+    check(pot(1, in: 0, by: 0) == 1 && room.pocketsLit(by: 0) == [0], "a new pocket lights up")
+    check(pot(2, in: 0, by: 0) == 0, "a repeat pocket gives no progress")
+    check(pot(3, in: 0, by: 1) == 1 && room.pocketsLit(by: 1) == [0], "pocket progress is per player")
+    check(pot(4, in: 1, by: 0, scratch: true) == 0 && room.pocketsLit(by: 0) == [0],
+          "a scratch cannot light a pocket")
+    check(pot(4, in: 1, by: 0) == 1 && pot(5, in: 2, by: 0) == 1 &&
+          room.phase == .playing, "three different pockets leave the round in progress")
+    check(pot(6, in: 3, by: 0) == 1 && room.pocketsLit(by: 0) == [0, 1, 2, 3] &&
+          room.phase == .finished && room.winner == 0, "four different pockets win the round with balls still on the table")
+    do {
+        let data = try JSONEncoder().encode(LANPacket(kind: "state", room: room))
+        let decoded = try JSONDecoder().decode(LANPacket.self, from: data)
+        check(decoded.room == room, "the LAN packet preserves each player's lit pockets and the winner")
+    } catch { check(false, "Six Pockets LAN packet: \(error)") }
+
+    room = RoomGame()
+    room.mode = .sixPockets
+    room.updateLobbyPlayers([0, 1])
+    game.reset()
+    check(room.start(iconCount: game.icons.count), "a new round clears progress")
+    for index in 1...game.icons.count { _ = pot(index, in: 0, by: index % 2) }
+    check(room.phase == .finished && room.winner == nil && room.pocketsLit(by: 0) == [0] &&
+          room.pocketsLit(by: 1) == [0], "clearing the table with tied pocket counts ends in a draw")
 }
 
 do {

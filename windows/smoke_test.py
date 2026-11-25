@@ -24,6 +24,18 @@ try:
     app.draw()
     assert "目标" in [app.canvas.itemcget(item, "text") for item in app.canvas.find_all()
                    if app.canvas.type(item) == "text"]
+    app.packet["room"] = {"mode": "sixPockets", "phase": "playing", "litPockets": {"0": [0], "1": [2, 4]}}
+    app.draw()
+    assert "六袋挑战 · 我的袋口 2/4" in [
+        app.canvas.itemcget(item, "text") for item in app.canvas.find_all() if app.canvas.type(item) == "text"
+    ]
+    pockets = [item for item in app.canvas.find_all() if app.canvas.type(item) == "oval"][:6]
+    assert [index for index, item in enumerate(pockets) if not app.canvas.itemcget(item, "dash")] == [2, 4]
+    app.packet["room"] = {"mode": "sixPockets", "phase": "playing", "litPockets": {"1": [2, 3, 4]}}
+    app.draw()
+    assert "六袋挑战 · 我的袋口 3/4" in [
+        app.canvas.itemcget(item, "text") for item in app.canvas.find_all() if app.canvas.type(item) == "text"
+    ]
     if os.name == "nt":
         system_exe = Path(os.environ["WINDIR"]) / "explorer.exe"
         data = ShellIcons().image(system_exe, 48)

@@ -2,13 +2,14 @@ import Foundation
 import BilliardsCore
 
 enum RoomMode: String, Codable, CaseIterable {
-    case assigned, free, called
+    case assigned, free, called, sixPockets
 
     var title: String {
         switch self {
         case .assigned: return "分球竞速"
         case .free: return "自由计分"
         case .called: return "点名球"
+        case .sixPockets: return "六袋挑战"
         }
     }
 }
@@ -17,6 +18,7 @@ enum RoomPhase: String, Codable { case lobby, playing, finished }
 
 struct RoomGame: Codable, Equatable {
     static let calledWinScore = 5
+    static let pocketWinScore = 4
 
     var phase: RoomPhase = .lobby
     var mode: RoomMode = .assigned
@@ -25,6 +27,8 @@ struct RoomGame: Codable, Equatable {
     var owners: [Int] = []
     /// Index in the physics body's array, where zero is the cue ball.
     var targetBall: Int?
+    /// The distinct pockets each player has scored in this round.
+    private(set) var litPockets: [Int: [Int]]?
     var winner: Int?
     var turnSerial = 0
     var paused = false
@@ -63,6 +67,7 @@ struct RoomGame: Codable, Equatable {
         owners = mode == .assigned
             ? (0..<iconCount).map { $0 < assignedCount ? players[$0 % players.count] : -1 } : []
         targetBall = mode == .called ? (1...iconCount).randomElement() : nil
+        litPockets = mode == .sixPockets ? [:] : nil
         phase = .playing
         winner = nil
         paused = false
@@ -79,8 +84,11 @@ struct RoomGame: Codable, Equatable {
         owners.enumerated().filter { $0.element == player && !sunk.contains($0.offset + 1) }.count
     }
 
-    /// A foul restores opponents' icons. If the final own icon was sunk on a foul,
-    /// restore one own icon as well so that a foul cannot end the round.
+    func pocketsLit(by player: Int) -> [Int] {
+        litPockets?[player] ?? []
+    }
+
+    /// Settle the shot under the active mode, restoring balls on a foul as required.
     mutating func settle(table: BilliardsMotion, shooter: Int, before: Set<Int>,
                          positions: [V2], scratched: Bool,
                          scoreBeforeShot: Int) -> (scored: Int, foul: Bool, restored: Bool) {
@@ -100,6 +108,26 @@ struct RoomGame: Codable, Equatable {
                     .filter { !table.sunk.contains($0) }.randomElement()
             }
             return (1, false, true)
+        }
+        if mode == .sixPockets {
+            if scratched {
+                table.giveBallInHand()
+                return (0, true, restoreBalls(newlySunk, table: table, positions: positions))
+            }
+            let previous = Set(pocketsLit(by: shooter))
+            let earned = Set(newlySunk.compactMap { table.pocketedAt[$0] }).subtracting(previous)
+            let total = previous.union(earned)
+            if !earned.isEmpty { litPockets?[shooter] = total.sorted() }
+            if total.count >= Self.pocketWinScore {
+                phase = .finished
+                winner = shooter
+            } else if table.state == .finished {
+                phase = .finished
+                let best = players.map { pocketsLit(by: $0).count }.max() ?? 0
+                let leaders = players.filter { pocketsLit(by: $0).count == best }
+                winner = leaders.count == 1 ? leaders.first : nil
+            }
+            return (earned.count, false, true)
         }
         guard mode == .assigned else {
             return (newlySunk.count, scratched, true)

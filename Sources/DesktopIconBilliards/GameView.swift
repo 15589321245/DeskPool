@@ -32,6 +32,19 @@ final class GameView: NSView {
     var onQuit: () -> Void = {}
     var onDesktopAccess: () -> Void = {}
     var onRoomAction: (String) -> Void = { _ in }
+    var copyLANAddress: (String) -> Bool = { address in
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        return pasteboard.setString(address, forType: .string)
+    }
+    var hostLANAddress: String? {
+        didSet {
+            guard oldValue != hostLANAddress else { return }
+            addressCopied = false
+            needsDisplay = true
+        }
+    }
+    private var addressCopied = false
     var roomState: RoomGame? {
         didSet {
             if oldValue?.phase != .finished && roomState?.phase == .finished {
@@ -290,6 +303,7 @@ final class GameView: NSView {
             return
         }
         if backgroundIntersects(dirtyRect) { background.draw(in: bounds) }
+        drawPocketProgress(ctx, dirtyRect: dirtyRect)
         buttons = []
         drawIcons(ctx, dirtyRect: dirtyRect)
         drawWhite(dirtyRect: dirtyRect)
@@ -345,6 +359,26 @@ final class GameView: NSView {
             CGRect(x: $0.x - r, y: $0.y - r, width: r * 2, height: r * 2)
                 .intersects(dirtyRect)
         }
+    }
+
+    private func drawPocketProgress(_ ctx: CGContext, dirtyRect: CGRect) {
+        guard let room = roomState, room.mode == .sixPockets, room.phase == .playing,
+              localPlayerID >= 0 else { return }
+        let lit = room.pocketsLit(by: localPlayerID)
+        let radius = table.pocketRadius
+        ctx.saveGState()
+        ctx.setLineWidth(2)
+        for (index, pocket) in table.pockets.enumerated() {
+            let frame = CGRect(x: pocket.x - radius, y: pocket.y - radius,
+                               width: radius * 2, height: radius * 2)
+            guard dirtyRect.intersects(frame.insetBy(dx: -1, dy: -1)) else { continue }
+            let scored = lit.contains(index)
+            ctx.setStrokeColor((scored ? Artwork.color(134, 238, 187, 170)
+                                      : Artwork.color(255, 220, 146, 150)).cgColor)
+            ctx.setLineDash(phase: 0, lengths: scored ? [] : [4, 4])
+            ctx.strokeEllipse(in: frame)
+        }
+        ctx.restoreGState()
     }
 
     private func drawIcons(_ ctx: CGContext, dirtyRect: CGRect) {
@@ -551,7 +585,9 @@ final class GameView: NSView {
     private func drawLobby() {
         guard let room = roomState else { return }
         let rows = max(1, (room.players.count + 1) / 2)
-        let height = CGFloat(150 + rows * 23)
+        let showAddress = room.phase == .lobby && localPlayerID == 0
+        let addressHeight = showAddress ? 36 : 0
+        let height = CGFloat(150 + rows * 23 + addressHeight)
         let centerX = table.bounds.left + table.bounds.width / 2
         let centerY = table.bounds.top + table.bounds.height / 2
         let frame = CGRect(x: centerX - 225, y: centerY - height / 2, width: 450, height: height)
@@ -570,18 +606,37 @@ final class GameView: NSView {
             description = "每人 \(each) 球" + (neutral > 0 ? " · 中立 \(neutral) 球" : "") + "；带“我”字的是自己的球。"
         } else if room.mode == .called {
             description = "打进金色标记的目标球得 1 分，先到 \(RoomGame.calledWinScore) 分获胜。"
+        } else if room.mode == .sixPockets {
+            description = "先点亮 \(RoomGame.pocketWinScore) 个不同袋口获胜，重复进同一袋口不计。"
         } else {
             description = "房主选择模式并开始；所有图标球均可击打。"
         }
         text(description,
              CGPoint(x: frame.minX + 16, y: frame.minY + 42),
              font: .systemFont(ofSize: 12), color: Artwork.color(178, 214, 200))
+        if showAddress {
+            let addressY = frame.minY + 65
+            let title = hostLANAddress.map { "局域网 IP  \($0)" } ?? "未获取局域网 IPv4"
+            text(title, CGPoint(x: frame.minX + 16, y: addressY + 5),
+                 font: .monospacedDigitSystemFont(ofSize: 13, weight: .medium),
+                 color: Artwork.color(235, 250, 243))
+            if let address = hostLANAddress {
+                let copy = CGRect(x: frame.maxX - 102, y: addressY, width: 86, height: 26)
+                button(addressCopied ? "已复制" : "复制 IP", rect: copy)
+                buttons.append((copy, { [weak self] in
+                    guard let self else { return }
+                    self.addressCopied = self.copyLANAddress(address)
+                    self.needsDisplay = true
+                }))
+            }
+        }
         for (index, player) in room.players.enumerated() {
             let column = index / rows, row = index % rows
             let status = room.phase == .lobby ? "在线" : "参赛中"
             let mine = player == localPlayerID ? "（我）" : ""
             text("\(playerName(player))\(mine) · \(status)",
-                 CGPoint(x: frame.minX + 16 + CGFloat(column * 210), y: frame.minY + 68 + CGFloat(row * 23)),
+                 CGPoint(x: frame.minX + 16 + CGFloat(column * 210),
+                         y: frame.minY + CGFloat(68 + addressHeight + row * 23)),
                  font: .systemFont(ofSize: 12), color: Artwork.color(235, 250, 243))
         }
         if !room.message.isEmpty {
@@ -657,19 +712,31 @@ final class GameView: NSView {
         guard let scores = networkScores, !scores.isEmpty else { return }
         let rows = ranked(scores)
         let assigned = roomState?.mode == .assigned && roomState?.phase == .playing
-        let called = roomState?.mode == .called
-        let header = assigned ? 43 : 26
+        let sixPockets = roomState?.mode == .sixPockets
+        let showPocketProgress = sixPockets && roomState?.phase == .playing && localPlayerID >= 0
+        let header = assigned || showPocketProgress ? 43 : 26
+        let title: String
+        switch roomState?.mode {
+        case .called: title = "点名球 · \(RoomGame.calledWinScore) 分获胜"
+        case .sixPockets: title = "六袋挑战 · \(RoomGame.pocketWinScore) 袋获胜"
+        default: title = "进球榜"
+        }
         let frame = CGRect(x: table.bounds.right - 152, y: table.bounds.top + 64,
                            width: 150, height: CGFloat(header + rows.count * 19))
         let path = NSBezierPath(roundedRect: frame, xRadius: 8, yRadius: 8)
         Artwork.color(8, 20, 20, 70).setFill(); path.fill()
-        text(called ? "点名球 · \(RoomGame.calledWinScore) 分获胜" : "进球榜",
+        text(title,
              CGPoint(x: frame.minX + 10, y: frame.minY + 6),
              font: .systemFont(ofSize: 11, weight: .medium), color: Artwork.color(235, 250, 243, 155))
         if assigned, let room = roomState {
             text("带“我”字的是我的球 · 剩 \(room.remaining(for: localPlayerID, sunk: table.sunk))",
                  CGPoint(x: frame.minX + 10, y: frame.minY + 23),
                  font: .systemFont(ofSize: 10), color: Artwork.color(169, 255, 210, 165))
+        }
+        if showPocketProgress, let room = roomState {
+            text("我的袋口 \(room.pocketsLit(by: localPlayerID).count)/\(RoomGame.pocketWinScore)",
+                 CGPoint(x: frame.minX + 10, y: frame.minY + 23),
+                 font: .systemFont(ofSize: 10), color: Artwork.color(255, 220, 146, 175))
         }
         for (index, row) in rows.enumerated() {
             let rank = rows.firstIndex { $0.goals == row.goals }! + 1
@@ -689,8 +756,10 @@ final class GameView: NSView {
         let path = NSBezierPath(roundedRect: frame, xRadius: 16, yRadius: 16)
         Artwork.color(13, 25, 23, 135).setFill(); path.fill()
         Artwork.color(105, 221, 179, 80).setStroke(); path.lineWidth = 1; path.stroke()
-        let title = roomState?.winner.map { "🎉 \(playerName($0)) 获胜！" } ?? "🎉 本局结算 · 按进球数"
-        let unit = roomState?.mode == .called ? "分" : "球"
+        let sixPockets = roomState?.mode == .sixPockets
+        let result = sixPockets ? "🎉 本局结算 · 按点亮袋口数" : "🎉 本局结算 · 按进球数"
+        let title = roomState?.winner.map { "🎉 \(playerName($0)) 获胜！" } ?? result
+        let unit = sixPockets ? "袋" : (roomState?.mode == .called ? "分" : "球")
         text(title, CGPoint(x: frame.midX, y: frame.minY + 20),
              font: .systemFont(ofSize: 18, weight: .semibold),
              color: Artwork.color(235, 250, 243, 205), align: .center)

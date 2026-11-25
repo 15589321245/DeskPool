@@ -10,7 +10,7 @@ import time
 import uuid
 
 PORT = 7777
-PROTOCOL = 5
+PROTOCOL = 6
 BALLS = 22  # Cue ball plus 21 icon balls.
 PLAYBACK_DELAY = 0.080
 

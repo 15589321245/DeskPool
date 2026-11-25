@@ -20,6 +20,7 @@ from lan import Guest
 ASPECT = 16 / 9
 CHARGE_SECONDS = 0.9
 MIN_CHARGE = 0.18
+POCKET_WIN_SCORE = 4
 
 
 def identity():
@@ -297,9 +298,11 @@ class App:
         target = self.room.get("targetBall") if playing else None
         owners = self.room.get("owners", []) if playing else []
         mode = self.room.get("mode")
+        lit_pockets = (self.room.get("litPockets") or {}).get(str(self.player), [])
         key = (x, y, width, height, self.positions, snapshot.get("sunk"), snapshot.get("state"),
                snapshot.get("visualScale"), snapshot.get("cueScale"), snapshot.get("pocketScale"),
-               self.aim or snapshot.get("aim"), self.guide, charge, target, owners, self.player, mode, scores, names)
+               self.aim or snapshot.get("aim"), self.guide, charge, target, owners, self.player,
+               mode, playing, lit_pockets, scores, names)
         if key == self.last_draw:
             return
         self.last_draw = key
@@ -309,8 +312,13 @@ class App:
         c.create_rectangle(x, y, x + width, y + height, fill="#1c3735", outline="#70918a", width=2)
         modes = {"called": self.tr("点名球 · 5 分获胜", "Called Ball · First to 5"),
                  "free": self.tr("自由计分", "Free Scoring"),
-                 "assigned": self.tr("分球竞速", "Assigned Balls")}
-        c.create_text(x + 34, y - 25, text=modes.get(mode, "DESKPOOL  /  LAN"), anchor="w",
+                 "assigned": self.tr("分球竞速", "Assigned Balls"),
+                 "sixPockets": self.tr("六袋挑战", "Six Pockets")}
+        title = modes.get(mode, "DESKPOOL  /  LAN")
+        if mode == "sixPockets" and self.player is not None:
+            progress = f"{len(lit_pockets)}/{POCKET_WIN_SCORE}"
+            title += self.tr(f" · 我的袋口 {progress}", f" · {progress} pockets lit")
+        c.create_text(x + 34, y - 25, text=title, anchor="w",
                       fill="#c9e8e1", font=("TkDefaultFont", 12, "bold"))
         if not self.packet:
             c.create_text(x + width / 2, y + height / 2, text=self.tr("等待连接", "Waiting for connection"),
@@ -318,9 +326,17 @@ class App:
             return
         pocket = height * (snapshot.get("pocketScale") or 0.047)
         pockets = [(u * width, v * height) for v in (0, 1) for u in (0, 0.5, 1)]
-        for px, py in pockets:
+        for index, (px, py) in enumerate(pockets):
+            outline = "#7da29d"
+            dash = ()
+            if mode == "sixPockets" and playing and self.player is not None:
+                if index in lit_pockets:
+                    outline = "#79c9a5"
+                else:
+                    outline = "#ceb47d"
+                    dash = (4, 4)
             c.create_oval(x + px - pocket, y + py - pocket, x + px + pocket, y + py + pocket,
-                          fill="#101e23", outline="#7da29d", width=2)
+                          fill="#101e23", outline=outline, dash=dash, width=2)
         sunk = set(snapshot["sunk"])
         tile = (snapshot.get("visualScale") or [0.041])[0] * width
         cue = (snapshot.get("cueScale") or [0.031])[0] * width

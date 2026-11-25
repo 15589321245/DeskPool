@@ -158,6 +158,8 @@ public final class BilliardsMotion {
     public private(set) var icons: [Body] = []
     public private(set) var bodies: [Body] = []
     public private(set) var sunk: Set<Int> = []
+    /// Pocket index for each icon sunk by the local simulation, keyed by body index.
+    public private(set) var pocketedAt: [Int: Int] = [:]
     public private(set) var whiteSunk = false
     public private(set) var state: GameState = .ready
     public private(set) var charge = 0.0
@@ -222,6 +224,7 @@ public final class BilliardsMotion {
         icons = rack.map { Body(x: $0.x, y: $0.y, radius: radius) }
         bodies = [white] + icons
         sunk = []
+        pocketedAt = [:]
         whiteSunk = false
         whiteDisplaySize = nil
         exits = [:]
@@ -257,6 +260,7 @@ public final class BilliardsMotion {
             body.angle = values[2]
         }
         sunk = Set(snapshot.sunk)
+        pocketedAt = pocketedAt.filter { sunk.contains($0.key) }
         whiteSunk = sunk.contains(0)
         state = snapshot.state
         aim = V2(snapshot.aim[0], snapshot.aim[1])
@@ -515,12 +519,13 @@ public final class BilliardsMotion {
                 if sunk.contains(index) { continue }
                 body.x += body.vx * h
                 body.y += body.vy * h
-                if let pocket = inPocket(body) {
+                if let pocket = pocketIndex(for: body) {
                     sunk.insert(index)
                     if index == 0 {
                         whiteSunk = true
                     } else {
-                        startExit(index, body, pocket)
+                        pocketedAt[index] = pocket
+                        startExit(index, body, pockets[pocket])
                     }
                 } else {
                     walls(body)
@@ -560,9 +565,9 @@ public final class BilliardsMotion {
         poses = computePoses()
     }
 
-    private func inPocket(_ body: Body) -> V2? {
+    private func pocketIndex(for body: Body) -> Int? {
         let capture = pocketRadius + body.radius * 0.55
-        return pockets.first {
+        return pockets.firstIndex {
             let dx = body.x - $0.x, dy = body.y - $0.y
             return dx * dx + dy * dy < capture * capture
         }
@@ -640,6 +645,7 @@ public final class BilliardsMotion {
         body.x = position.x; body.y = position.y
         body.vx = 0; body.vy = 0; body.angle = 0; body.impact = 0
         sunk.remove(index + 1)
+        pocketedAt.removeValue(forKey: index + 1)
         exits.removeValue(forKey: index + 1)
         if state == .finished { state = whiteSunk ? .returnWhite : .ready; readyFor = 0 }
         poses = computePoses()

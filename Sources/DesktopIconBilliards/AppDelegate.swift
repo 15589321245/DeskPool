@@ -187,6 +187,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificat
                 view.networkNames = registry.names
                 room = RoomGame()
                 view.roomState = room
+                view.hostLANAddress = LANAddress.current()
             }
             view.networkStatus = guest ? "正在连接房主" : "房主 · 等待玩家加入"
             localPlayer = guest ? -1 : 0
@@ -461,6 +462,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificat
         }
         if tickTime - lastDiagnosticsAt >= 1 {
             lastDiagnosticsAt = tickTime
+            if room?.phase == .lobby { view.hostLANAddress = LANAddress.current() }
             let broadcast = roomAdvertised ? "广播已启用" : "广播未确认"
             view.networkDiagnostics = "更新 \(view.updateRate)/秒 · 重绘 \(view.drawRate) 次/秒\n房间\(broadcast)"
         }
@@ -487,7 +489,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificat
                 for player in state.players {
                     scores[player] = state.owners.filter { $0 == player }.count - state.remaining(for: player, sunk: table.sunk)
                 }
-            } else if state.mode == .called {
+            } else if state.mode == .called || state.mode == .sixPockets {
                 scores[shotOwner, default: 0] += outcome.scored
             } else if table.state == .finished {
                 state.phase = .finished
@@ -502,9 +504,17 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificat
             } else if state.phase == .playing && (outcome.foul || outcome.scored == 0) {
                 let index = state.players.firstIndex(of: shotOwner) ?? 0
                 turn = state.players[(index + 1) % state.players.count]
-                state.message = outcome.foul ? "犯规，换下一位摆白球" : "未进球，换下一位"
+                if outcome.foul {
+                    state.message = "犯规，换下一位摆白球"
+                } else if state.mode == .sixPockets && table.sunk.subtracting(shotStartSunk).contains(where: { $0 > 0 }) {
+                    state.message = "袋口已点亮，换下一位"
+                } else {
+                    state.message = "未进球，换下一位"
+                }
             } else if state.mode == .called && state.phase == .playing {
                 state.message = "目标球入袋 +1 分，继续击球"
+            } else if state.mode == .sixPockets && state.phase == .playing {
+                state.message = "点亮 \(outcome.scored) 个袋口，继续击球"
             } else { state.message = "" }
             state.turnSerial += 1
             room = state
